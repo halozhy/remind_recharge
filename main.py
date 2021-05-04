@@ -8,7 +8,6 @@ if __name__ == '__main__':
     session_new = requests.Session()
     url_pass_neu = "https://pass.neu.edu.cn/tpass/login?service=https%3A%2F%2Fportal.neu.edu.cn%2Ftp_up%2F"
     r = session_new.get(url_pass_neu)
-
     lt_list = re.compile(r'name="lt" value="(.+?)"').findall(r.text)
     lp_list = re.compile(r'id="loginForm" action="(.+?)"').findall(r.text)
     if len(lt_list) != 1 or len(lp_list) != 1:
@@ -27,19 +26,13 @@ if __name__ == '__main__':
         'Host': 'pass.neu.edu.cn',
         'Origin': 'https://pass.neu.edu.cn',
     }
-    print(r.cookies.get("jsessionid_tpass"))
     r = session_new.post(url=f'https://pass.neu.edu.cn{login_path}', data=login_body, headers=login_header, allow_redirects=False)
-    print(r.cookies.get("CASTGC"))
-    print(r.text)
-    print(r.headers["Location"])
     r = session_new.get(url=r.headers["Location"], allow_redirects=False)
-    print(r.url)
-    print(r.cookies.get("tp_up"))
     r = session_new.post("https://portal.neu.edu.cn/tp_up/up/subgroup/getCardMoney", data={})
-    print(r.text)
+    print(float(json.loads(r.text)["card_balance"])/100)
 
 
-def main():
+def main_old():
     session = requests.Session()
     url_pass_neu = "https://pass.neu.edu.cn/tpass/login?service=http%3A%2F%2Fhub.17wanxiao.com%2Fcas-dongbei%2Fcas%2Fcjgy%2Flight.action%3Fflag%3Ddongbei_dongbeidaxue%26amp%3BecardFunc%3Dindex "
     # url_pass_neu = "https://e-report.neu.edu.cn/login"
