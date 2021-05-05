@@ -1,83 +1,89 @@
 import json
 import sys
-
 import requests
 import re
+import smtplib
+import traceback
+from email.mime.text import MIMEText
+from email.header import Header
+
+
+def get_card_money(username, password):
+    session = requests.Session()
+    url_pass_neu = "https://pass.neu.edu.cn/tpass/login?service=https%3A%2F%2Fportal.neu.edu.cn%2Ftp_up%2F"
+    r = session.get(url_pass_neu)
+    lt_list = re.compile(r'name="lt" value="(.+?)"').findall(r.text)
+    lp_list = re.compile(r'id="loginForm" action="(.+?)"').findall(r.text)
+    if len(lt_list) != 1 or len(lp_list) != 1:
+        print('bad get neu login page request')
+        exit(0)
+    lt = lt_list[0]
+    login_path = lp_list[0]
+    login_body = f'rsa={username}{password}{lt}&ul={len(username)}&pl={len(password)}&lt={lt}' \
+                 '&execution=e1s1&_eventId=submit'
+    login_header: dict = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Host': 'pass.neu.edu.cn',
+        'Origin': 'https://pass.neu.edu.cn',
+    }
+    r = session.post(url=f'https://pass.neu.edu.cn{login_path}', data=login_body, headers=login_header,
+                     allow_redirects=False)
+    if not r.headers.__contains__("Location"):
+        print("bad login neu request, please check your ID or PWD")
+        exit(0)
+    session.get(url=r.headers["Location"], allow_redirects=False)
+    r = session.post("https://portal.neu.edu.cn/tp_up/up/subgroup/getCardMoney", data={})
+    r_dict = json.loads(r.text)
+    if not r_dict.__contains__("card_balance"):
+        print("bad get card balance")
+        exit(0)
+    return float(r_dict["card_balance"]) / 100
+
+
+def send_warn_email(mail_host, mail_user, mail_pass, mail_receiver, subject, content):
+    try:
+        from_: Header = Header("饭卡余额小助手", 'utf-8')
+        to: Header = Header("小主", 'utf-8')
+        svr = smtplib.SMTP()
+        svr.connect(mail_host)
+        svr.login(mail_user, mail_pass)
+        message = MIMEText(content, 'plain', 'utf-8')
+        message['Subject'] = Header(subject, 'utf-8')
+        message['From'] = from_
+        message['To'] = to
+        svr.sendmail(mail_user, mail_receiver, message.as_string())
+        print("send mail successfully")
+    except Exception as e:
+        print("fail to send mail")
+        print(e)
+        traceback.print_exc()
+
 
 if __name__ == '__main__':
-    session_new = requests.Session()
-    url_pass_neu = "https://pass.neu.edu.cn/tpass/login?service=https%3A%2F%2Fportal.neu.edu.cn%2Ftp_up%2F"
-    r = session_new.get(url_pass_neu)
-    lt_list = re.compile(r'name="lt" value="(.+?)"').findall(r.text)
-    lp_list = re.compile(r'id="loginForm" action="(.+?)"').findall(r.text)
-    if len(lt_list) != 1 or len(lp_list) != 1:
-        print('bad get neu login page request')
-        exit(0)
-    lt = lt_list[0]
-    login_path = lp_list[0]
-    if len(sys.argv) != 3:
-        print('usage:\npython main.py <id> <password>')
-        exit(0)
-    username = sys.argv[1]
-    password = sys.argv[2]
-    login_body = f'rsa={username}{password}{lt}&ul={len(username)}&pl={len(password)}&lt={lt}&execution=e1s1&_eventId=submit'
-    login_header: dict = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Host': 'pass.neu.edu.cn',
-        'Origin': 'https://pass.neu.edu.cn',
-    }
-    r = session_new.post(url=f'https://pass.neu.edu.cn{login_path}', data=login_body, headers=login_header, allow_redirects=False)
-    r = session_new.get(url=r.headers["Location"], allow_redirects=False)
-    r = session_new.post("https://portal.neu.edu.cn/tp_up/up/subgroup/getCardMoney", data={})
-    print(float(json.loads(r.text)["card_balance"])/100)
+    args_len = len(sys.argv)
+    if args_len < 3:
+        print("Missing enough arguments, at least 2: user, pass")
+        exit(1)
+    if 4 < args_len < 8:
+        print(
+            "Missing enough arguments, expect 7: user, pass, warn_num, mail_host, mail_user, mail_pass, mail_receiver")
+        exit(1)
+    if args_len > 8:
+        print("Too many arguments")
+        exit(1)
 
+    user = sys.argv[1]
+    pwd = sys.argv[2]
+    balance = get_card_money(user, pwd)
 
-def main_old():
-    session = requests.Session()
-    url_pass_neu = "https://pass.neu.edu.cn/tpass/login?service=http%3A%2F%2Fhub.17wanxiao.com%2Fcas-dongbei%2Fcas%2Fcjgy%2Flight.action%3Fflag%3Ddongbei_dongbeidaxue%26amp%3BecardFunc%3Dindex "
-    # url_pass_neu = "https://e-report.neu.edu.cn/login"
-    r = session.get(url=url_pass_neu)
-    lt_list = re.compile(r'name="lt" value="(.+?)"').findall(r.text)
-    lp_list = re.compile(r'id="loginForm" action="(.+?)"').findall(r.text)
-    if len(lt_list) != 1 or len(lp_list) != 1:
-        print('bad get neu login page request')
-        exit(0)
-    lt = lt_list[0]
-    login_path = lp_list[0]
-    if len(sys.argv) != 3:
-        print('usage:\npython main.py <id> <password>')
-        exit(0)
-    username = sys.argv[1]
-    password = sys.argv[2]
-    login_body = f'rsa={username}{password}{lt}&ul={len(username)}&pl={len(password)}&lt={lt}&execution=e1s1&_eventId=submit'
-    login_header: dict = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Host': 'pass.neu.edu.cn',
-        'Origin': 'https://pass.neu.edu.cn',
-    }
-    r = session.post(url=f'https://pass.neu.edu.cn{login_path}', data=login_body, headers=login_header)
-    data_list = re.compile(r'data:\'(.+?)\'').findall(r.text)
-    if len(data_list) != 1:
-        print('bad login neu request\n'
-              'please check whether your id or password is correct\n'
-              'or please wait for a minute and try again')
-        print(r.text)
-        exit(0)
-    data_dict = json.loads(data_list[0][9:])
-    url_17wan_xiao = "http://hub.17wanxiao.com/cas-dongbei/bsacs/redirect.action"
-    post_header: dict = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Host': 'hub.17wanxiao.com',
-        'Origin': 'http://hub.17wanxiao.com',
-        'Cookie': f'JSESSIONID={session.cookies.get("JSESSIONID")}; SERVERID= {session.cookies.get("SERVERID")}'
-    }
-    r = session.post(url=url_17wan_xiao, data=data_list[0], headers=post_header)
-    r = session.get(url=json.loads(r.text)["url"])
-    r = session.get(url=r.url.replace("%20", ""))
-    url_boot_call_back = "https://ecardh5.17wanxiao.com/ecardh5/bootcallback"
-    post_header: dict = {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-    }
-    session.headers.update(post_header)
-    r = session.post(url=url_boot_call_back, data="gotowhere=XYK_BASE_INFO")
-    print(json.loads(r.text)["data"]["main_fare"])
+    if args_len <= 3 or "" in sys.argv[3:8]:
+        print("running without sending email, just print balance")
+        print(balance)
+    else:
+        warn_num = sys.argv[3]
+        print("running with sending email")
+        if balance < float(warn_num):
+            send_warn_email(sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7], '快饿死了……', '你的饭卡余额低于设定值了哦')
+            pass
+        else:
+            print('unnecessary to send email')
