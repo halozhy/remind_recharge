@@ -35,3 +35,4 @@ python main.py <学号> <密码>
    - `MAIL_RECEIVER` 邮件收件人
 
 3. 可以对 README.md 进行一次在线修改并保存（比如加一行空行之类的），然后去 Actions 标签中查看运行结果
+
