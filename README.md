@@ -35,3 +35,6 @@ python main.py <学号> <密码>
    - `MAIL_RECEIVER` 邮件收件人
 
 3. 可以对 README.md 进行一次在线修改并保存（比如加一行空行之类的），然后去 Actions 标签中查看运行结果
+
+## 已知 Issue
+- 不定时会发生 Connection timed out ，也许和 GitHub WorkFlow 服务器在国外有关
