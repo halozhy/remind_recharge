@@ -7,9 +7,13 @@ import traceback
 from email.mime.text import MIMEText
 from email.header import Header
 
+from requests.packages import urllib3
+
+
 
 def get_card_money(username, password):
     session = requests.Session()
+    urllib3.disable_warnings()
     url_pass_neu = "https://pass.neu.edu.cn/tpass/login?service=https%3A%2F%2Fportal.neu.edu.cn%2Ftp_up%2F"
     r = session.get(url_pass_neu)
     lt_list = re.compile(r'name="lt" value="(.+?)"').findall(r.text)
