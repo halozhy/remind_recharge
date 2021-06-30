@@ -17,12 +17,12 @@ def get_card_money(username, password):
     url_pass_neu = "https://pass.neu.edu.cn/tpass/login?service=https%3A%2F%2Fportal.neu.edu.cn%2Ftp_up%2F"
     try:
         r = session.get(url_pass_neu)
-        print(r)
-        print(r.text)
         lt_list = re.compile(r'name="lt" value="(.+?)"').findall(r.text)
         lp_list = re.compile(r'id="loginForm" action="(.+?)"').findall(r.text)
         if len(lt_list) != 1 or len(lp_list) != 1:
             print('bad get neu login page request')
+            print(r)
+            print(r.text)
             exit(0)
         lt = lt_list[0]
         login_path = lp_list[0]
